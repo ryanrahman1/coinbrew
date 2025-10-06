@@ -1,5 +1,7 @@
 from config import supabase
 from typing import Optional
+from datetime import datetime, timedelta, timezone
+
 
 # Users
 def get_user_by_username(username: str):
@@ -178,3 +180,41 @@ def get_user_profile(user_id: int):
         "coins_created": [c["symbol"] for c in coins_created],
         "portfolio": portfolio
     }
+
+
+# Update price based on formula
+
+def calculate_new_price(coin_id: int, range_str: str = "6h"):
+    coin_data = supabase.table("coins").select("*").eq("id", coin_id).execute().data
+    if not coin_data:
+        raise ValueError("Coin not found")
+    coin = coin_data[0]
+
+    P_current = coin["current_price"]
+    circulating_supply = coin["circulating_supply"]
+
+    now = datetime.now(timezone.utc)
+    six_hours_ago = now - timedelta(hours=6)
+
+    trades = supabase.table("trades").select("*") \
+        .eq("coin_id", coin_id) \
+        .gte("timestamp", six_hours_ago.isoformat()) \
+        .execute().data
+
+    if not trades:
+        P_new = P_current * 1.002
+    else:
+        total_buy = sum(t["amount"] * t["price_per_coin"] for t in trades if t["buyer_id"])
+        total_sell = sum(t["amount"] * t["price_per_coin"] for t in trades if t["seller_id"])
+        net_demand = total_buy - total_sell
+
+        alpha, beta, lambda_smooth = 0.0005, 0.0003, 0.3
+        price_change_factor = (alpha + beta) * (net_demand / circulating_supply)
+        P_calc = P_current * (1 + price_change_factor)
+        P_new = lambda_smooth * P_calc + (1 - lambda_smooth) * P_current
+
+        max_change = 0.2
+        P_new = max(P_current * (1 - max_change), min(P_current * (1 + max_change), P_new))
+
+    update_coin_price(coin_id, P_new)
+    add_coin_history(coin_id, [P_new], range_str)

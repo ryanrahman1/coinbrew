@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, File, UploadFile
 from pydantic import BaseModel, constr
-from db.queries import create_coin, get_coin_by_id, get_coin_by_symbol, get_all_coins, get_coin_history, get_user_by_username, buy_coin, sell_coin, get_user_portfolio, get_leaderboard, get_user_profile, get_user_by_id, get_user_wallets
+from db.queries import calculate_new_price, create_coin, get_coin_by_id, get_coin_by_symbol, get_all_coins, get_coin_history, get_user_by_username, buy_coin, sell_coin, get_user_portfolio, get_leaderboard, get_user_profile, get_user_by_id, get_user_wallets
 from typing import Optional
 from utils.image import process_image, generate_filename
 from config import supabase
@@ -124,6 +124,8 @@ def buy_coin_endpoint(request: BuyCoinRequest):
     
     try:
         buy_coin(request.user_id, coin["id"], request.amount, request.price_per_coin)
+        # Update coin price after buy
+        calculate_new_price(coin["id"])
         return {"message": "Coin purchased successfully"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -137,6 +139,8 @@ def sell_coin_endpoint(request: SellCoinRequest):
     
     try:
         sell_coin(request.user_id, coin["id"], request.amount, request.price_per_coin)
+        # Update coin price after sell
+        calculate_new_price(coin["id"])
         return {"message": "Coin sold successfully"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
