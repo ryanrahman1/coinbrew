@@ -10,6 +10,8 @@ import jobs.price_updater
 app = FastAPI(title="CoinBrew API", version="1.0.0")
 
 origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
     "http://localhost:3000",
     #TODO Add production URL here
 ]
