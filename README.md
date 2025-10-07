@@ -79,5 +79,23 @@ CoinBrew is a mock cryptocurrency trading platform backend. It provides endpoint
 - Formula considers net demand vs supply, smoothing factor (EMA), and caps extreme changes to ±20% per update.
 - Ensures realistic-looking coin price movement.
 
+---
 
-**Ryan Rahman** © 2025  
+## License
+
+Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+
+Copyright (c) 2025 Ryan Rahman
+
+You are free to:
+
+- Share — copy and redistribute the material in any medium or format
+- Adapt — remix, transform, and build upon the material
+
+Under the following terms:
+
+- Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
+- NonCommercial — You may not use the material for commercial purposes.
+- No additional restrictions — You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
+
+Full license: https://creativecommons.org/licenses/by-nc/4.0/legalcode
