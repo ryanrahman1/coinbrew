@@ -48,32 +48,56 @@ async def create_coin_endpoint(
     creator_username: str = Form(...),
     file: UploadFile = File(None)
 ):
-    existing_coin = get_coin_by_symbol(symbol)
-    if existing_coin:
-        raise HTTPException(status_code=400, detail="Coin with this symbol already exists")
-    
-    creator = get_user_by_username(creator_username)
-    if not creator:
-        raise HTTPException(status_code=404, detail="Creator username does not exist")
-    
-    img_url = None
-    if file:
-        ext = file.filename.split(".")[-1]
-        if ext.lower() not in ["png", "jpg", "jpeg"]:
-            raise HTTPException(status_code=400, detail="Invalid image format. Only PNG and JPG are allowed.")
-        processed_file = process_image(await file.read())
-        filename = generate_filename(symbol, ext)
-        supabase.storage.from_("coin-images").upload(filename, processed_file)
-        img_url = supabase.storage.from_("coin-images").get_public_url(filename)
+    try:
+        # Check if coin exists
+        existing_coin = get_coin_by_symbol(symbol)
+        if existing_coin:
+            raise HTTPException(status_code=400, detail="Coin with this symbol already exists")
+        
+        # Check if creator exists
+        creator = get_user_by_username(creator_username)
+        if not creator:
+            raise HTTPException(status_code=404, detail="Creator username does not exist")
+        
+        img_url = None
 
-    create_coin(
-        img_url=img_url,
-        name=name,
-        symbol=symbol,
-        creator_id=creator['id']
-    )    
+        if file:
+            ext = file.filename.split(".")[-1].lower()
+            if ext not in ["png", "jpg", "jpeg"]:
+                raise HTTPException(status_code=400, detail="Invalid image format. Only PNG and JPG are allowed.")
+            
+            try:
+                processed_file = process_image(await file.read())
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
+            
+            filename = generate_filename(symbol, ext)
+            upload_res = supabase.storage.from_("coin-images").upload(filename, processed_file)
+            if upload_res.get("error"):
+                raise HTTPException(status_code=500, detail=f"Supabase upload error: {upload_res['error']['message']}")
+            
+            try:
+                img_url = supabase.storage.from_("coin-images").get_public_url(filename)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error getting image URL: {str(e)}")
+        
+        # Create coin
+        try:
+            create_coin(
+                img_url=img_url,
+                name=name,
+                symbol=symbol,
+                creator_id=creator['id']
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error creating coin in DB: {str(e)}")
+        
+        return {"message": "Coin created successfully", "creator": creator['username'], "img_url": img_url}
 
-    return {"message": "Coin created successfully", "creator": creator['username'], "img_url": img_url}
+    except HTTPException:
+        raise  # let FastAPI handle HTTP exceptions
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected server error: {str(e)}")
 
 
 @router.post("/all")
