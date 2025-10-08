@@ -49,12 +49,10 @@ async def create_coin_endpoint(
     file: UploadFile = File(None)
 ):
     try:
-        # Check if coin exists
         existing_coin = get_coin_by_symbol(symbol)
         if existing_coin:
             raise HTTPException(status_code=400, detail="Coin with this symbol already exists")
         
-        # Check if creator exists
         creator = get_user_by_username(creator_username)
         if not creator:
             raise HTTPException(status_code=404, detail="Creator username does not exist")
@@ -67,7 +65,8 @@ async def create_coin_endpoint(
                 raise HTTPException(status_code=400, detail="Invalid image format. Only PNG and JPG are allowed.")
             
             try:
-                processed_file = process_image(await file.read())
+                file_bytes = await file.read()
+                processed_file = process_image(file_bytes) 
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
             
@@ -81,7 +80,6 @@ async def create_coin_endpoint(
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Error getting image URL: {str(e)}")
         
-        # Create coin
         try:
             create_coin(
                 img_url=img_url,
@@ -95,7 +93,7 @@ async def create_coin_endpoint(
         return {"message": "Coin created successfully", "creator": creator['username'], "img_url": img_url}
 
     except HTTPException:
-        raise  # let FastAPI handle HTTP exceptions
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected server error: {str(e)}")
 
