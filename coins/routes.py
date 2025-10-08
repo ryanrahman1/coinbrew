@@ -72,8 +72,8 @@ async def create_coin_endpoint(
             
             filename = generate_filename(symbol, ext)
             upload_res = supabase.storage.from_("coin-images").upload(filename, processed_file)
-            if upload_res.get("error"):
-                raise HTTPException(status_code=500, detail=f"Supabase upload error: {upload_res['error']['message']}")
+            if not upload_res:
+                raise HTTPException(status_code=500, detail=f"Supabase upload error: {upload_res.error.message}")
             
             try:
                 img_url = supabase.storage.from_("coin-images").get_public_url(filename)
