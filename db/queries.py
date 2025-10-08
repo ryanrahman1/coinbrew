@@ -1,7 +1,9 @@
 from config import supabase
 from typing import Optional
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, ROUND_DOWN, getcontext
 
+getcontext().prec = 28
 
 # Users
 def get_user_by_username(username: str):
@@ -44,16 +46,22 @@ def get_all_coins(min_price: Optional[float] = None, max_price: Optional[float] 
     query = query.range(offset, offset + limit - 1)
     return query.execute().data
 
-def create_coin(img_url: str, name: str, symbol: str, creator_id: int):
+def create_coin(img_url: str, name: str, symbol: str, creator_id: int, total_supply: int = 1_000_000, initial_market_cap: float = 1000.0):
+
+    circulating_supply = total_supply
+    current_price = (Decimal(str(initial_market_cap)) / Decimal(str(total_supply))).quantize(
+        Decimal("0.00000001"), rounding=ROUND_DOWN
+    )
+
     supabase.table("coins").insert({
         "img_url": img_url,
         "name": name,
         "symbol": symbol,
         "creator_id": creator_id,
-        "total_supply": 1_000_000_000,
-        "circulating_supply": 1_000_000_000,
-        "current_price": 0.001,
-        "initial_market_cap": 1000
+        "total_supply": total_supply,
+        "circulating_supply": circulating_supply,
+        "current_price": float(current_price),
+        "initial_market_cap": initial_market_cap
     }).execute()
 
 def update_coin_price(coin_id: int, new_price: float):
