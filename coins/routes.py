@@ -35,10 +35,10 @@ class SellCoinRequest(BaseModel):
 
 VALID_RANGES = ["12h", "24h", "1w", "max"]
 
-def validate_range(range_str: str) -> bool:
+def validate_range(range_str: str) -> None:
     if range_str not in VALID_RANGES:
         raise HTTPException(status_code=400, detail=f"Invalid range. Must be one of {VALID_RANGES}")
-    return range_str
+    # No return value needed; this function validates or raises
 
 
 @router.post("/create")
@@ -127,12 +127,12 @@ def get_coin_endpoint(symbol: str):
 
 
 @router.get("/{symbol}/history")
-def get_coin_history_endpoint(symbol: str, range: str = Query(...)):
-    validate_range(range)
+def get_coin_history_endpoint(symbol: str, time_range: str = Query(...)):
+    validate_range(time_range)
     coin = get_coin_by_symbol(symbol)
     if not coin:
         raise HTTPException(status_code=404, detail="Coin not found")
-    history = get_coin_history(coin["id"], range)
+    history = get_coin_history(coin["id"], time_range)
     if not history:
         raise HTTPException(status_code=404, detail="No history found for this coin and range")
     return {"history": history}
