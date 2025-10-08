@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, File, UploadFile
+from fastapi import APIRouter, HTTPException, Query, File, UploadFile, Form
 from pydantic import BaseModel, constr
 from db.queries import calculate_new_price, create_coin, get_coin_by_id, get_coin_by_symbol, get_all_coins, get_coin_history, get_user_by_username, buy_coin, sell_coin, get_user_portfolio, get_leaderboard, get_user_profile, get_user_by_id, get_user_wallets
 from typing import Optional
@@ -43,9 +43,9 @@ def validate_range(range_str: str) -> bool:
 
 @router.post("/create")
 async def create_coin_endpoint(
-    name: str,
-    symbol: constr(min_length=1, max_length=5), #type: ignore
-    creator_username: str,
+    name: str = Form(...),
+    symbol: constr(min_length=1, max_length=5) = Form(...),  # type: ignore
+    creator_username: str = Form(...),
     file: UploadFile = File(None)
 ):
     existing_coin = get_coin_by_symbol(symbol)
