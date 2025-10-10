@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query, File, UploadFile, Form
+from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile, Form
 from pydantic import BaseModel, constr
-from db.queries import calculate_new_price, create_coin, get_coin_by_id, get_coin_by_symbol, get_all_coins, get_coin_history, get_user_by_username, buy_coin, sell_coin, get_user_portfolio, get_leaderboard, get_user_profile, get_user_by_id, get_user_wallets
+from db.queries import calculate_new_price, create_coin, get_coin_by_id, get_coin_by_symbol, get_all_coins, get_coin_history, get_current_user, get_user_by_username, buy_coin, sell_coin, get_user_portfolio, get_leaderboard, get_user_profile, get_user_by_id, get_user_wallets
 from typing import Optional
 from utils.image import process_image, generate_filename
 from config import supabase
@@ -45,7 +45,7 @@ def validate_range(range_str: str) -> None:
 async def create_coin_endpoint(
     name: str = Form(...),
     symbol: constr(min_length=1, max_length=5) = Form(...),  # type: ignore
-    creator_username: str = Form(...),
+    current_user = Depends(get_current_user),
     file: UploadFile = File(None)
 ):
     try:
@@ -53,12 +53,7 @@ async def create_coin_endpoint(
         if existing_coin:
             raise HTTPException(status_code=400, detail="Coin with this symbol already exists")
         
-        creator = get_user_by_username(creator_username)
-        if not creator:
-            raise HTTPException(status_code=404, detail="Creator username does not exist")
-        
         img_url = None
-
         if file:
             ext = file.filename.split(".")[-1].lower()
             if ext not in ["png", "jpg", "jpeg"]:
@@ -85,12 +80,12 @@ async def create_coin_endpoint(
                 img_url=img_url,
                 name=name,
                 symbol=symbol,
-                creator_id=creator['id']
+                creator_id=current_user.id  # <-- use current user
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error creating coin in DB: {str(e)}")
         
-        return {"message": "Coin created successfully", "creator": creator['username'], "img_url": img_url}
+        return {"message": "Coin created successfully", "creator": current_user.email, "img_url": img_url}
 
     except HTTPException:
         raise
@@ -139,14 +134,16 @@ def get_coin_history_endpoint(symbol: str, time_range: str = Query(...)):
 
 
 @router.post("/buy")
-def buy_coin_endpoint(request: BuyCoinRequest):
+def buy_coin_endpoint(
+    request: BuyCoinRequest, 
+    current_user = Depends(get_current_user)
+):
     coin = get_coin_by_symbol(request.coin_symbol)
     if not coin:
         raise HTTPException(status_code=404, detail="Coin not found")
     
     try:
-        buy_coin(request.user_id, coin["id"], request.amount, request.price_per_coin)
-        # Update coin price after buy
+        buy_coin(current_user.id, coin["id"], request.amount, request.price_per_coin)
         calculate_new_price(coin["id"])
         return {"message": "Coin purchased successfully"}
     except ValueError as e:
@@ -154,14 +151,16 @@ def buy_coin_endpoint(request: BuyCoinRequest):
 
 
 @router.post("/sell")
-def sell_coin_endpoint(request: SellCoinRequest):
+def sell_coin_endpoint(
+    request: SellCoinRequest, 
+    current_user = Depends(get_current_user)
+):
     coin = get_coin_by_symbol(request.coin_symbol)
     if not coin:
         raise HTTPException(status_code=404, detail="Coin not found")
     
     try:
-        sell_coin(request.user_id, coin["id"], request.amount, request.price_per_coin)
-        # Update coin price after sell
+        sell_coin(current_user.id, coin["id"], request.amount, request.price_per_coin)
         calculate_new_price(coin["id"])
         return {"message": "Coin sold successfully"}
     except ValueError as e:
