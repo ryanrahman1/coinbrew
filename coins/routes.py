@@ -1,3 +1,4 @@
+import string
 from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile, Form
 from pydantic import BaseModel, constr
 from db.queries import calculate_new_price, create_coin, get_coin_by_id, get_coin_by_symbol, get_all_coins, get_coin_history, get_current_user, get_user_by_username, buy_coin, sell_coin, get_user_portfolio, get_leaderboard, get_user_profile, get_user_by_id, get_user_wallets
@@ -22,13 +23,13 @@ class CoinGetHistoryRequest(BaseModel):
     range: str
 
 class BuyCoinRequest(BaseModel):
-    user_id: int
+    user_id: string
     coin_symbol: str
     amount: float
     price_per_coin: float
 
 class SellCoinRequest(BaseModel):
-    user_id: int
+    user_id: string
     coin_symbol: str
     amount: float
     price_per_coin: float
@@ -38,7 +39,6 @@ VALID_RANGES = ["12h", "24h", "1w", "max"]
 def validate_range(range_str: str) -> None:
     if range_str not in VALID_RANGES:
         raise HTTPException(status_code=400, detail=f"Invalid range. Must be one of {VALID_RANGES}")
-    # No return value needed; this function validates or raises
 
 
 @router.post("/create")
@@ -168,7 +168,7 @@ def sell_coin_endpoint(
 
 
 @router.get("/portfolio/{user_id}")
-def get_portfolio_endpoint(user_id: int):
+def get_portfolio_endpoint(user_id: string):
     portfolio = get_user_portfolio(user_id)
     return {"portfolio": portfolio}
 
@@ -180,13 +180,13 @@ def get_leaderboard_endpoint(top_n: int = 10):
 
 
 @router.get("/profile/{user_id}")
-def get_user_profile_endpoint(user_id: int):
+def get_user_profile_endpoint(user_id: string):
     profile = get_user_profile(user_id)
     return {"profile": profile}
 
 
 @router.get("/user/{user_id}")
-def get_user_endpoint(user_id: int):
+def get_user_endpoint(user_id: string):
     user = get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -194,6 +194,6 @@ def get_user_endpoint(user_id: int):
 
 
 @router.get("/wallets/{user_id}")
-def get_user_wallets_endpoint(user_id: int):
+def get_user_wallets_endpoint(user_id: string):
     wallets = get_user_wallets(user_id)
     return {"wallets": wallets}
