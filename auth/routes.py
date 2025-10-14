@@ -1,8 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from supabase import create_client
-import os
 from config import supabase  
 
 router = APIRouter()

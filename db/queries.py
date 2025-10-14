@@ -1,4 +1,3 @@
-import string
 from config import supabase
 from typing import Optional
 from datetime import datetime, timedelta, timezone
@@ -26,7 +25,7 @@ def get_user_by_username(username: str):
     res = supabase.table("users").select("*").eq("username", username).execute()
     return res.data[0] if res.data else None
 
-def get_user_by_id(user_id: string):
+def get_user_by_id(user_id: str):
     res = supabase.table("users").select("*").eq("id", user_id).execute()
     return res.data[0] if res.data else None
 
@@ -37,7 +36,7 @@ def create_user(username: str, hashed_password: str, balance: float = 1500.0):
         "balance": balance
     }).execute()
 
-def update_user_balance(user_id: string, new_balance: float):
+def update_user_balance(user_id: str, new_balance: float):
     supabase.table("users").update({"balance": new_balance}).eq("id", user_id).execute()
 
 
@@ -85,21 +84,21 @@ def update_coin_price(coin_id: int, new_price: float):
 
 
 # Wallets
-def get_wallet(user_id: string, coin_id: int):
+def get_wallet(user_id: str, coin_id: int):
     res = supabase.table("wallets").select("*").eq("user_id", user_id).eq("coin_id", coin_id).execute()
     return res.data[0] if res.data else None
 
-def create_wallet(user_id: string, coin_id: int, amount: float):
+def create_wallet(user_id: str, coin_id: int, amount: float):
     supabase.table("wallets").insert({
         "user_id": user_id,
         "coin_id": coin_id,
         "amount": amount
     }).execute()
 
-def update_wallet(user_id: string, coin_id: int, new_amount: float):
+def update_wallet(user_id: str, coin_id: int, new_amount: float):
     supabase.table("wallets").update({"amount": new_amount}).eq("user_id", user_id).eq("coin_id", coin_id).execute()
 
-def safe_update_wallet(user_id: string, coin_id: int, delta_amount: float):
+def safe_update_wallet(user_id: str, coin_id: int, delta_amount: float):
     wallet = get_wallet(user_id, coin_id)
     if wallet:
         new_amount = wallet["amount"] + delta_amount
@@ -111,7 +110,7 @@ def safe_update_wallet(user_id: string, coin_id: int, delta_amount: float):
             raise ValueError("Insufficient coin balance")
         create_wallet(user_id, coin_id, delta_amount)
 
-def get_user_wallets(user_id: string):
+def get_user_wallets(user_id: str):
     res = supabase.table("wallets").select("*").eq("user_id", user_id).execute()
     return res.data
 
@@ -175,7 +174,7 @@ def get_leaderboard(top_n: int = 10):
 
 
 # Portfolio / User Info
-def get_user_portfolio(user_id: string):
+def get_user_portfolio(user_id: str):
     wallets = get_user_wallets(user_id)
     portfolio = []
     total_value = 0
@@ -194,7 +193,7 @@ def get_user_portfolio(user_id: string):
     total_value += user["balance"]
     return {"balance": user["balance"], "coins": portfolio, "total_value": total_value}
 
-def get_user_profile(user_id: string):
+def get_user_profile(user_id: str):
     user = get_user_by_id(user_id)
     coins_created = supabase.table("coins").select("*").eq("creator_id", user_id).execute().data
     portfolio = get_user_portfolio(user_id)
