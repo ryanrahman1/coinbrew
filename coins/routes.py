@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile, Form
 from pydantic import BaseModel, constr
-from db.queries import calculate_new_price, create_coin, get_coin_by_symbol, get_all_coins, get_coin_history, get_current_user, buy_coin, sell_coin, get_user_portfolio, get_leaderboard, get_user_profile, get_user_by_id, get_user_wallets
+from db.queries import calculate_new_price, create_coin, get_coin_by_symbol, get_all_coins, get_coin_history, get_current_user, buy_coin, get_recent_trades, sell_coin, get_user_portfolio, get_leaderboard, get_user_profile, get_user_by_id, get_user_wallets
 from typing import Optional
 from utils.image import process_image, generate_filename
 from config import supabase
@@ -182,6 +182,13 @@ def get_leaderboard_endpoint(top_n: int = 10):
 def get_user_profile_endpoint(user_id: str):
     profile = get_user_profile(user_id)
     return {"profile": profile}
+
+@router.get("/trades/{user_id}")
+def get_recent_trades_endpoint(user_id: str, limit: int = 10):
+    trades = get_recent_trades(user_id, limit)
+    if not trades:
+        raise HTTPException(status_code=404, detail="No trades found for this user")
+    return {"trades": trades}
 
 
 @router.get("/user/{user_id}")

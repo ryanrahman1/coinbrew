@@ -125,6 +125,30 @@ def record_trade(buyer_id: Optional[int], seller_id: Optional[int], coin_id: int
         "price_per_coin": price_per_coin
     }).execute()
 
+
+#fetch recent trades
+def get_recent_trades(user_id: str, limit: int = 10):
+    trades_data = supabase.table("trades").select("*").execute().data
+    user_trades = []
+
+    for t in trades_data:
+        if t.get("buyer_id") == user_id or t.get("seller_id") == user_id:
+            coin = get_coin_by_id(t["coin_id"])
+            trade_type = "buy" if t.get("buyer_id") == user_id else "sell"
+            user_trades.append({
+                "id": t["id"],
+                "coin_symbol": coin["symbol"] if coin else None,
+                "amount": float(t["amount"]),
+                "price_per_coin": float(t["price_per_coin"]),
+                "timestamp": t["timestamp"],
+                "trade_type": trade_type
+            })
+
+    user_trades.sort(key=lambda x: x["timestamp"], reverse=True)
+    return user_trades[:limit]
+
+
+
 def buy_coin(buyer_id: int, coin_id: int, amount: float, price_per_coin: float):
     buyer = get_user_by_id(buyer_id)
     total_cost = amount * price_per_coin
