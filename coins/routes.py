@@ -22,13 +22,13 @@ class CoinGetHistoryRequest(BaseModel):
     range: str
 
 class BuyCoinRequest(BaseModel):
-    user_id: int
+    user_id: str
     coin_symbol: str
     amount: float
     price_per_coin: float
 
 class SellCoinRequest(BaseModel):
-    user_id: int
+    user_id: str
     coin_symbol: str
     amount: float
     price_per_coin: float
