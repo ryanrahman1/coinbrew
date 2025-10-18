@@ -1,45 +1,97 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from auth.utils import hash_password, verify_password
-from db.queries import get_user_by_username, create_user, get_user_by_id
+from config import supabase  
 
 router = APIRouter()
 
 class RegisterRequest(BaseModel):
-    username: str
+    email: str
     password: str
+    username: str
 
 class LoginRequest(BaseModel):
-    username: str
+    email: str
     password: str
 
 
 @router.post("/register")
 def register(request: RegisterRequest):
-    existing_user = get_user_by_username(request.username)
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Username already exists")
-    
-    hashed = hash_password(request.password)
-    create_user(request.username, hashed)
-    return {"message": "User registered successfully"}
+    auth_res = supabase.auth.sign_up({
+        "email": request.email,
+        "password": request.password,
+    })
+
+    if not auth_res.user:
+        raise HTTPException(status_code=400, detail="Registration failed")
+
+    user_id = auth_res.user.id
+
+    supabase.table("users").insert({
+        "id": user_id, 
+        "username": request.username,
+        "email": request.email,
+        "balance": 1500.0
+    }).execute()
+
+    return {"message": "User registered successfully", "user_id": user_id}
+
 
 @router.post("/login")
 def login(request: LoginRequest):
-    user = get_user_by_username(request.username)
-    if not user or not verify_password(request.password, user['password']):
+    auth_res = supabase.auth.sign_in_with_password({
+        "email": request.email,
+        "password": request.password,
+    })
+
+    if not auth_res.session:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    return {"message": "Login successful", "user_id": user["id"]}
+
+    response = JSONResponse({
+        "message": "Login successful",
+        "access_token": auth_res.session.access_token,
+        "user_id": auth_res.user.id
+    })
+
+    response.set_cookie(
+        key="refresh_token",
+        value=auth_res.session.refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="lax"
+    )
+
+    return response
 
 
-@router.get("/user/{user_id}")
-def get_user(user_id: int):
-    user = get_user_by_id(user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {
-        "id": user["id"],
-        "username": user["username"],
-        "balance": user["balance"]
-    }
+@router.post("/refresh")
+def refresh(request: Request):
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="No refresh token")
+
+    auth_res = supabase.auth.refresh_session(refresh_token)
+    if not auth_res.session:
+        raise HTTPException(status_code=401, detail="Failed to refresh session")
+
+    response = JSONResponse({
+        "access_token": auth_res.session.access_token,
+        "user_id": auth_res.user.id
+    })
+
+    response.set_cookie(
+        key="refresh_token",
+        value=auth_res.session.refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="lax"
+    )
+
+    return response
+
+
+@router.post("/logout")
+def logout():
+    response = JSONResponse({"message": "Logged out"})
+    response.delete_cookie("refresh_token")
+    return response

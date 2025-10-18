@@ -1,14 +1,31 @@
 from config import supabase
 from typing import Optional
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, ROUND_DOWN, getcontext
+from fastapi import Header, HTTPException, Depends
+
+getcontext().prec = 28
 
 
+def get_current_user(authorization: str = Header(...)):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid auth header")
+    token = authorization.split(" ")[1]
+
+    # verify token with supabase
+    user = supabase.auth.get_user(token).user
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    return user
+
+    
 # Users
 def get_user_by_username(username: str):
     res = supabase.table("users").select("*").eq("username", username).execute()
     return res.data[0] if res.data else None
 
-def get_user_by_id(user_id: int):
+def get_user_by_id(user_id: str):
     res = supabase.table("users").select("*").eq("id", user_id).execute()
     return res.data[0] if res.data else None
 
@@ -19,7 +36,7 @@ def create_user(username: str, hashed_password: str, balance: float = 1500.0):
         "balance": balance
     }).execute()
 
-def update_user_balance(user_id: int, new_balance: float):
+def update_user_balance(user_id: str, new_balance: float):
     supabase.table("users").update({"balance": new_balance}).eq("id", user_id).execute()
 
 
@@ -44,16 +61,22 @@ def get_all_coins(min_price: Optional[float] = None, max_price: Optional[float] 
     query = query.range(offset, offset + limit - 1)
     return query.execute().data
 
-def create_coin(img_url: str, name: str, symbol: str, creator_id: int):
+def create_coin(img_url: str, name: str, symbol: str, creator_id: int, total_supply: int = 1_000_000, initial_market_cap: float = 1000.0):
+
+    circulating_supply = total_supply
+    current_price = (Decimal(str(initial_market_cap)) / Decimal(str(total_supply))).quantize(
+        Decimal("0.00000001"), rounding=ROUND_DOWN
+    )
+
     supabase.table("coins").insert({
         "img_url": img_url,
         "name": name,
         "symbol": symbol,
         "creator_id": creator_id,
-        "total_supply": 1_000_000_000,
-        "circulating_supply": 1_000_000_000,
-        "current_price": 0.001,
-        "initial_market_cap": 1000
+        "total_supply": total_supply,
+        "circulating_supply": circulating_supply,
+        "current_price": float(current_price),
+        "initial_market_cap": initial_market_cap
     }).execute()
 
 def update_coin_price(coin_id: int, new_price: float):
@@ -61,21 +84,21 @@ def update_coin_price(coin_id: int, new_price: float):
 
 
 # Wallets
-def get_wallet(user_id: int, coin_id: int):
+def get_wallet(user_id: str, coin_id: int):
     res = supabase.table("wallets").select("*").eq("user_id", user_id).eq("coin_id", coin_id).execute()
     return res.data[0] if res.data else None
 
-def create_wallet(user_id: int, coin_id: int, amount: float):
+def create_wallet(user_id: str, coin_id: int, amount: float):
     supabase.table("wallets").insert({
         "user_id": user_id,
         "coin_id": coin_id,
         "amount": amount
     }).execute()
 
-def update_wallet(user_id: int, coin_id: int, new_amount: float):
+def update_wallet(user_id: str, coin_id: int, new_amount: float):
     supabase.table("wallets").update({"amount": new_amount}).eq("user_id", user_id).eq("coin_id", coin_id).execute()
 
-def safe_update_wallet(user_id: int, coin_id: int, delta_amount: float):
+def safe_update_wallet(user_id: str, coin_id: int, delta_amount: float):
     wallet = get_wallet(user_id, coin_id)
     if wallet:
         new_amount = wallet["amount"] + delta_amount
@@ -87,7 +110,7 @@ def safe_update_wallet(user_id: int, coin_id: int, delta_amount: float):
             raise ValueError("Insufficient coin balance")
         create_wallet(user_id, coin_id, delta_amount)
 
-def get_user_wallets(user_id: int):
+def get_user_wallets(user_id: str):
     res = supabase.table("wallets").select("*").eq("user_id", user_id).execute()
     return res.data
 
@@ -101,6 +124,30 @@ def record_trade(buyer_id: Optional[int], seller_id: Optional[int], coin_id: int
         "amount": amount,
         "price_per_coin": price_per_coin
     }).execute()
+
+
+#fetch recent trades
+def get_recent_trades(user_id: str, limit: int = 10):
+    trades_data = supabase.table("trades").select("*").execute().data
+    user_trades = []
+
+    for t in trades_data:
+        if t.get("buyer_id") == user_id or t.get("seller_id") == user_id:
+            coin = get_coin_by_id(t["coin_id"])
+            trade_type = "buy" if t.get("buyer_id") == user_id else "sell"
+            user_trades.append({
+                "id": t["id"],
+                "coin_symbol": coin["symbol"] if coin else None,
+                "amount": float(t["amount"]),
+                "price_per_coin": float(t["price_per_coin"]),
+                "timestamp": t["timestamp"],
+                "trade_type": trade_type
+            })
+
+    user_trades.sort(key=lambda x: x["timestamp"], reverse=True)
+    return user_trades[:limit]
+
+
 
 def buy_coin(buyer_id: int, coin_id: int, amount: float, price_per_coin: float):
     buyer = get_user_by_id(buyer_id)
@@ -151,7 +198,7 @@ def get_leaderboard(top_n: int = 10):
 
 
 # Portfolio / User Info
-def get_user_portfolio(user_id: int):
+def get_user_portfolio(user_id: str):
     wallets = get_user_wallets(user_id)
     portfolio = []
     total_value = 0
@@ -170,7 +217,7 @@ def get_user_portfolio(user_id: int):
     total_value += user["balance"]
     return {"balance": user["balance"], "coins": portfolio, "total_value": total_value}
 
-def get_user_profile(user_id: int):
+def get_user_profile(user_id: str):
     user = get_user_by_id(user_id)
     coins_created = supabase.table("coins").select("*").eq("creator_id", user_id).execute().data
     portfolio = get_user_portfolio(user_id)
