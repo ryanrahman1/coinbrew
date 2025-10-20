@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Coinbrew API Docs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #181b24;
+      --accent: #4f8cff;
+      --text: #e2e2e2;
+      --muted: #9aa0ad;
+      --border: #2a2d35;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      text-align: center;
+      padding: 3rem 1rem 2rem;
+      background: linear-gradient(135deg, #11131a, #151822);
+      border-bottom: 1px solid var(--border);
+    }
+    header h1 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+    main {
+      max-width: 900px;
+      margin: 3rem auto;
+      padding: 0 1.2rem;
+    }
+    section {
+      margin-bottom: 3rem;
+    }
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      border-left: 4px solid var(--accent);
+      padding-left: 0.6rem;
+    }
+    .endpoint {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: 10px;
+      padding: 1.2rem 1.5rem;
+      margin-bottom: 1.4rem;
+      transition: all 0.2s ease;
+    }
+    .endpoint:hover {
+      border-color: #6fa4ff;
+      transform: translateY(-2px);
+    }
+    .endpoint-method {
+      display: inline-block;
+      font-weight: 600;
+      background: var(--accent);
+      color: #fff;
+      padding: 0.2rem 0.6rem;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      margin-right: 0.6rem;
+      text-transform: uppercase;
+    }
+    .endpoint-method.post {
+      background: #5cb85c;
+    }
+    .endpoint-method.delete {
+      background: #d9534f;
+    }
+    .endpoint-url {
+      font-family: monospace;
+      font-size: 1rem;
+      color: var(--text);
+    }
+    .endpoint-desc {
+      color: var(--muted);
+      margin-top: 0.6rem;
+      font-size: 0.96rem;
+    }
+    .endpoint-params {
+      margin-top: 0.8rem;
+      font-size: 0.92rem;
+      color: #c3c7cf;
+    }
+    code {
+      background: #212531;
+      padding: 0.15rem 0.4rem;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      color: #b0c8ff;
+    }
+    pre {
+      background: var(--card);
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+    @media (max-width: 600px) {
+      main {
+        padding: 0 0.6rem;
+      }
+      header h1 {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Coinbrew API</h1>
+    <p>Fast, clean, self-hosted crypto market backend</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Overview</h2>
+      <p>Welcome to the <strong>Coinbrew API</strong> — a RESTful service for managing coins, users, and trading data.
+        Below you'll find all public and authenticated endpoints. Authenticated endpoints require Bearer token authentication or session cookies.</p>
+    </section>
+
+    <section>
+      <h2>Authentication</h2>
+
+      <div class="endpoint">
+        <span class="endpoint-method post">POST</span>
+        <span class="endpoint-url">/api/v2/auth/register</span>
+        <div class="endpoint-desc">Register a new user account. Creates auth user and user record with $1,500 starting balance.</div>
+        <div class="endpoint-params"><strong>Body:</strong> <code>username</code> (string), <code>email</code> (string), <code>password</code> (string)</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Access token, refresh token (also set as httpOnly cookies)</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method post">POST</span>
+        <span class="endpoint-url">/api/v2/auth/login</span>
+        <div class="endpoint-desc">Login with existing credentials. Returns session tokens.</div>
+        <div class="endpoint-params"><strong>Body:</strong> <code>email</code> (string), <code>password</code> (string)</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Access token, refresh token (also set as httpOnly cookies)</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method post">POST</span>
+        <span class="endpoint-url">/api/v2/auth/refresh</span>
+        <div class="endpoint-desc">Refresh authentication tokens using refresh token from cookies.</div>
+        <div class="endpoint-params"><strong>Cookie:</strong> <code>refresh_token</code> (httpOnly)</div>
+        <div class="endpoint-params"><strong>Returns:</strong> New access and refresh tokens</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Coins</h2>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-url">/api/v2/coins</span>
+        <div class="endpoint-desc">Get a paginated, filterable, and sortable list of all coins.</div>
+        <div class="endpoint-params"><strong>Query:</strong> <code>min_price</code> (float, optional), <code>limit</code> (int, default=20), <code>offset</code> (int, default=0), <code>sort_by</code> (string, default="current_price"), <code>order</code> (asc|desc, default="desc")</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Array of coin objects</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-url">/api/v2/coins/{symbol}</span>
+        <div class="endpoint-desc">Fetch detailed information for a specific coin by its symbol (e.g., BTC, ETH).</div>
+        <div class="endpoint-params"><strong>Path:</strong> <code>symbol</code> (string, required, case-insensitive)</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Single coin object with all properties</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-url">/api/v2/coins/{symbol}/history</span>
+        <div class="endpoint-desc">Get historical price data for a specific coin over time.</div>
+        <div class="endpoint-params"><strong>Path:</strong> <code>symbol</code> (string, required)</div>
+        <div class="endpoint-params"><strong>Query:</strong> <code>time_range</code> (12h | 24h | 1w | max, default="7d")</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Object with history array containing timestamp/price pairs</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-url">/api/v2/coins/search</span>
+        <div class="endpoint-desc">Search for coins by name or symbol using fuzzy matching (case-insensitive).</div>
+        <div class="endpoint-params"><strong>Query:</strong> <code>query</code> (string, required) - Search term</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Array of matching coin objects</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method post">POST</span>
+        <span class="endpoint-url">/api/v2/coins/create</span>
+        <div class="endpoint-desc">Create a new coin with Fair Launch settings (1M supply, $0.001 initial price). Requires authentication. Supports optional image upload (max 5MB, PNG/JPG only).</div>
+        <div class="endpoint-params"><strong>Auth:</strong> Bearer token required</div>
+        <div class="endpoint-params"><strong>Form Data:</strong> <code>name</code> (string, required), <code>symbol</code> (string, required), <code>file</code> (image file, optional)</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Created coin object with public image URL</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Users</h2>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-url">/api/v2/user/me</span>
+        <div class="endpoint-desc">Get complete information for the currently authenticated user, including email and balance.</div>
+        <div class="endpoint-params"><strong>Auth:</strong> Bearer token required</div>
+        <div class="endpoint-params"><strong>Returns:</strong> User object with id, username, email, balance, created_at</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-url">/api/v2/user/{user_id}/profile</span>
+        <div class="endpoint-desc">Fetch a user's full profile including portfolio holdings and recent trade history. Email is hidden unless viewing your own profile.</div>
+        <div class="endpoint-params"><strong>Auth:</strong> Bearer token required</div>
+        <div class="endpoint-params"><strong>Path:</strong> <code>user_id</code> (string, required) - User UUID</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Object with user info, portfolio (holdings array + total value), and recent_trades array (limit 10)</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Trading</h2>
+
+      <div class="endpoint">
+        <span class="endpoint-method post">POST</span>
+        <span class="endpoint-url">/api/v2/trade/buy</span>
+        <div class="endpoint-desc">Execute a buy trade. Deducts balance, adds holdings, and records the transaction.</div>
+        <div class="endpoint-params"><strong>Auth:</strong> Bearer token required</div>
+        <div class="endpoint-params"><strong>Body:</strong> <code>coin_symbol</code> (string, required), <code>amount</code> (float, required), <code>price_per_coin</code> (float, required)</div>
+        <div class="endpoint-params"><strong>Validates:</strong> Sufficient balance, coin exists</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Trade confirmation with transaction details</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method post">POST</span>
+        <span class="endpoint-url">/api/v2/trade/sell</span>
+        <div class="endpoint-desc">Execute a sell trade. Validates holdings, reduces holdings, adds to balance, and records transaction.</div>
+        <div class="endpoint-params"><strong>Auth:</strong> Bearer token required</div>
+        <div class="endpoint-params"><strong>Body:</strong> <code>coin_symbol</code> (string, required), <code>amount</code> (float, required), <code>price_per_coin</code> (float, required)</div>
+        <div class="endpoint-params"><strong>Validates:</strong> Sufficient holdings to sell</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Trade confirmation with transaction details</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Market</h2>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-url">/api/v2/market/top</span>
+        <div class="endpoint-desc">Get top or bottom performing coins ranked by market capitalization.</div>
+        <div class="endpoint-params"><strong>Query:</strong> <code>limit</code> (int, default=10) - Number of coins to return, <code>order</code> (asc|desc, default="desc")</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Object with coins array containing market cap and all coin details</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-url">/api/v2/market/leaderboard</span>
+        <div class="endpoint-desc">Get top users ranked by total portfolio value (balance + holdings).</div>
+        <div class="endpoint-params"><strong>Query:</strong> <code>limit</code> (int, default=10) - Number of users to return</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Object with leaderboard array containing username and total_value</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-url">/api/v2/market/recent-trades</span>
+        <div class="endpoint-desc">Get recent global trades with pagination and optional filtering by coin symbol.</div>
+        <div class="endpoint-params"><strong>Query:</strong> <code>limit</code> (int, default=10, max=100), <code>offset</code> (int, default=0), <code>symbol</code> (string, optional) - Filter by coin symbol</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Object with trades array including coin info, buyer/seller usernames, amount, price, and timestamp</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Public</h2>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-url">/api/v2/public/stats</span>
+        <div class="endpoint-desc">Get general API statistics including user count, coin count, total trades, and endpoint usage metrics.</div>
+        <div class="endpoint-params"><strong>Auth:</strong> None required</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Stats object with total counts, total requests, top 5 endpoints by usage, and timestamp</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-url">/api/v2/public/health</span>
+        <div class="endpoint-desc">Health check endpoint confirming server and database connectivity.</div>
+        <div class="endpoint-params"><strong>Auth:</strong> None required</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Status object with service health, version, database status, and timestamp</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Admin (Protected)</h2>
+
+      <div class="endpoint">
+        <span class="endpoint-method post">POST</span>
+        <span class="endpoint-url">/api/v2/admin/update-market</span>
+        <div class="endpoint-desc">Recalculate prices for all coins based on recent trade activity. Uses dynamic pricing algorithm with ±30% volatility cap.</div>
+        <div class="endpoint-params"><strong>Auth:</strong> Admin API key required (X-Admin-Key header)</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Count of coins updated</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method post">POST</span>
+        <span class="endpoint-url">/api/v2/admin/recalculate-marketcap</span>
+        <div class="endpoint-desc">Recalculate market capitalization for all coins (price × circulating supply).</div>
+        <div class="endpoint-params"><strong>Auth:</strong> Admin API key required (X-Admin-Key header)</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Success confirmation message</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method post">POST</span>
+        <span class="endpoint-url">/api/v2/admin/refresh-coin/{symbol}</span>
+        <div class="endpoint-desc">Force price and history update for a specific coin.</div>
+        <div class="endpoint-params"><strong>Auth:</strong> Admin API key required (X-Admin-Key header)</div>
+        <div class="endpoint-params"><strong>Path:</strong> <code>symbol</code> (string, required) - Coin symbol to refresh</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Success message with new calculated price</div>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-url">/api/v2/admin/status</span>
+        <div class="endpoint-desc">Admin status check to verify admin routes are operational.</div>
+        <div class="endpoint-params"><strong>Auth:</strong> Admin API key required (X-Admin-Key header)</div>
+        <div class="endpoint-params"><strong>Returns:</strong> Status message and timestamp</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Response Format</h2>
+      <pre><code>{
+  "id": "uuid-here",
+  "name": "Bitcoin",
+  "symbol": "BTC",
+  "current_price": 0.001,
+  "total_supply": 1000000.0,
+  "circulating_supply": 1000000.0,
+  "img_url": "https://storage.url/image.png",
+  "creator_id": "uuid-here",
+  "created_at": "2025-01-01T00:00:00Z"
+}</code></pre>
+    </section>
+
+    <section>
+      <h2>Authentication</h2>
+      <p>Most endpoints require authentication. Include the Bearer token in the Authorization header:</p>
+      <pre><code>Authorization: Bearer YOUR_ACCESS_TOKEN</code></pre>
+      <p>Alternatively, tokens are stored in httpOnly cookies after login/register.</p>
+      <p>Admin endpoints require an additional admin API key:</p>
+      <pre><code>X-Admin-Key: YOUR_ADMIN_KEY</code></pre>
+    </section>
+
+    <section>
+      <h2>Error Example</h2>
+      <pre><code>{
+  "detail": "Coin not found"
+}</code></pre>
+      <p>Common error codes: <code>400</code> (Bad Request), <code>401</code> (Unauthorized), <code>404</code> (Not Found), <code>500</code> (Internal Server Error)</p>
+    </section>
+  </main>
+</body>
+</html>
