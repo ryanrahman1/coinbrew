@@ -13,7 +13,8 @@ app = FastAPI(title="Coinbrew API", version="2.0.0")
 templates = Jinja2Templates(directory="templates")
 
 origins = [
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
     #TODO: Add production URL here
 ]
 

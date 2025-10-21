@@ -2,6 +2,10 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr
 from db.supabase_client import supabase
 from decimal import Decimal
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Register, login, and refresh token routes 
 
@@ -46,23 +50,26 @@ def create_user_record(user_id: str, email: str, username: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Exception creating user record: {str(e)}")
     
+
 def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
-    """ Set secure cookies for tokens. """
+    """Set secure cookies for tokens."""
+    dev = os.getenv("DEV_MODE", "true").lower() == "true"
+
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=True,
-        samesite="lax",
-        max_age=60*60  # 1 hour
+        secure=not dev,             # only secure in production
+        samesite="none" if not dev else "lax",  # "none" allows cross-site
+        max_age=60 * 60,            # 1 hour
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,
-        samesite="lax",
-        max_age=30*24*60*60  # 30 days
+        secure=not dev,
+        samesite="none" if not dev else "lax",
+        max_age=30 * 24 * 60 * 60,  # 30 days
     )
 
 # routes
